@@ -261,7 +261,7 @@ Dangling actor ids in `actorGroups` occur (actors deleted) — not an error.
 | FX bus | single digit 1–4 (TheatreMix-side); console bus via `cfg.fxBusMap` |
 | Bus id | Mix buses: raw console bus number on X32/M32 and Yamaha (`13–16`, `37–40`, `5`); `11xx` on dLive. Other targets ≥1000: `1000` LR; `1302` dLive position bus; `14xx` = DCA xx (`1408` WING, `1421` DM7) `[I]`. Keep raw |
 | Scene number | X32 0-based; TF `0–99`⇒A00–A99, `100–199`⇒B00–B99; QL/CL `x.yy` ⇒ (`scene`,`point`) |
-| Colour | `0`/NULL none, `1` red, `2` yellow, `3` green, `4` blue, `5` purple `[I]` |
+| Colour | `0`/NULL none, `1` red, `2` yellow, `3` green, `4` blue, `5` purple `[I]` (the app's menu offers exactly these six, in this order) |
 | Action index | `0` Go, `1` Back; others `[?]` |
 | Playback (`qLabCues`) | `0` off, `1` QLab, `2` SCS `[I]`, `3` Cue Player `[I]` |
 

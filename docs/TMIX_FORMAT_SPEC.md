@@ -345,7 +345,7 @@ One row per cue. Unique key `(number, point)`.
 | `scenePoints` | text | IntList | Decimal points for `scenes`, **parallel list, same length** (Yamaha `x.yy`; `0` elsewhere). Only single-element examples observed (`scenes=1`, `scenePoints=0`) **[I]**. |
 | `qLabCue` | text | string | Playback cue number to fire (QLab/SCS/Cue Player per `config.qLabCues`). Case- and whitespace-sensitive. e.g. `M01`, `MX29`. |
 | `channelLevels` | text | IntMap channel→offset | Relative fader offset in **0.1 dB units**, range `-150…+50` (−15.0…+5.0 dB, the documented limits; both extremes occur). Zero is never stored. |
-| `colour` | int / NULL | enum | Cue highlight. `0`/`NULL` = none; `1` red, `2` yellow, `3` green, `4` blue, `5` purple **[I]** — `0`/`NULL` = none is certain (dominant value; column NULL in migrated files); the 1–5 order follows the binary's string table `red,yellow,green,blue,purple,none` and the OSC API's `[red\|yellow\|green\|blue\|purple]`. Observed values: 0,1,2,4,5,NULL. |
+| `colour` | int / NULL | enum | Cue highlight. `0`/`NULL` = none; `1` red, `2` yellow, `3` green, `4` blue, `5` purple **[I]** — `0`/`NULL` = none is certain (dominant value; column NULL in migrated files); the 1–5 order follows the binary's string table `red,yellow,green,blue,purple,none`, the OSC API's `[red\|yellow\|green\|blue\|purple]`, and the app's cue-colour menu, which lists exactly *None, Red, Yellow, Green, Blue, Purple* in that order. Observed values: 0,1,2,4,5,NULL. |
 | `skip` | int | bool | `1` = cue is skipped on Go (shown in purple). `NULL` ⇒ 0. |
 
 The app's own read query (with `%1`/`%2` expanding to the `dca09…12` columns when the console has
