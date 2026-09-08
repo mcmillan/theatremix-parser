@@ -22,13 +22,9 @@ jobs:
       - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
-      - name: gofmt
+      - name: make check
         shell: bash
-        run: test -z "$(gofmt -l .)" || { gofmt -l .; exit 1; }
-      - name: go vet
-        run: go vet ./...
-      - name: go test
-        run: go test ./...
+        run: make check
 
   build:
     name: build (${{ matrix.goos }}/${{ matrix.goarch }})
@@ -49,12 +45,8 @@ jobs:
       - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
-      - name: Build
+      - name: make dist
         id: build
-        env:
-          GOOS: ${{ matrix.goos }}
-          GOARCH: ${{ matrix.goarch }}
-          CGO_ENABLED: "0"
         run: |
           set -euo pipefail
           if [[ "$GITHUB_REF_TYPE" == tag ]]; then
@@ -62,19 +54,8 @@ jobs:
           else
             version="$(git describe --tags --always --dirty)"
           fi
-          name="theatremix-parser_${version}_${GOOS}_${GOARCH}"
-          ext=""; [[ "$GOOS" == windows ]] && ext=".exe"
-          mkdir -p "dist/$name"
-          go build -trimpath -ldflags "-s -w -X main.version=${version}" \
-            -o "dist/$name/theatremix-parser$ext" ./cmd/theatremix-parser
-          cp README.md LICENSE "dist/$name/"
-          cd dist
-          if [[ "$GOOS" == windows ]]; then
-            zip -qr "$name.zip" "$name"
-          else
-            tar -czf "$name.tar.gz" "$name"
-          fi
-          echo "name=$name" >> "$GITHUB_OUTPUT"
+          make dist GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} VERSION="$version"
+          echo "name=theatremix-parser_${version}_${{ matrix.goos }}_${{ matrix.goarch }}" >> "$GITHUB_OUTPUT"
       - uses: actions/upload-artifact@v7
         with:
           name: ${{ steps.build.outputs.name }}

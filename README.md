@@ -98,8 +98,11 @@ violations := tmix.Validate(show)
 ## Development
 
 ```sh
-go test ./...
-go test ./cmd/... -update   # regenerate golden JSON after an intentional output change
+make            # build bin/theatremix-parser
+make check      # gofmt + go vet + go test — what CI runs
+make golden     # regenerate the CLI golden JSON after a reviewed output change
+make dist-all   # package release archives for every OS/arch into dist/
+make help       # list every target
 ```
 
 Tests run against the real show file in [`testdata/real/`](testdata/real/);
