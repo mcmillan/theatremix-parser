@@ -1,0 +1,4 @@
+# Check out text files with LF everywhere (Windows runners default to
+# autocrlf=true, which breaks gofmt -l and byte-for-byte golden comparisons).
+* text=auto eol=lf
+*.tmix binary
