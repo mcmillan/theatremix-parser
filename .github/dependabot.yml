@@ -1,0 +1,12 @@
+# Keep the GitHub-owned actions in .github/workflows and the Go module
+# dependencies on their latest versions.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+  - package-ecosystem: gomod
+    directory: /
+    schedule:
+      interval: weekly
