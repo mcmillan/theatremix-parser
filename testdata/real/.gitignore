@@ -1,0 +1,3 @@
+# Real show files carry designer names, venues and console IP/MAC addresses.
+# They are ignored by default; commit one deliberately with `git add -f`.
+*.tmix

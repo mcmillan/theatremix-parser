@@ -1,0 +1,71 @@
+# theatremix-parser
+
+Reads a [TheatreMix](https://theatremix.com/) `.tmix` show file and writes a JSON
+representation of it. The show file format was reverse-engineered; the
+specification lives in [`docs/`](docs/):
+
+- [`docs/TMIX_FORMAT_SPEC.md`](docs/TMIX_FORMAT_SPEC.md) — full specification with evidence
+- [`docs/TMIX_FORMAT_SPEC.agent.md`](docs/TMIX_FORMAT_SPEC.agent.md) — condensed reference
+
+## Install
+
+```sh
+go install github.com/mcmillan/theatremix-parser/cmd/theatremix-parser@latest
+```
+
+Pure Go (no cgo) — cross-compiles anywhere Go does.
+
+## Usage
+
+```
+theatremix-parser [flags] [FILE]
+
+  FILE        a .tmix show file; omit or use "-" to read it from stdin
+  -compact    single-line JSON (default: indented)
+  -validate   check the show against the format invariants; report violations
+              on stderr and exit 2 if any are found
+  -version    print the version and exit
+```
+
+```sh
+theatremix-parser show.tmix | jq '.cues[] | {id, name, dcas}'
+cat show.tmix | theatremix-parser -compact > show.json
+```
+
+Exit codes: `0` success · `1` error (nothing written to stdout) · `2` invariant
+violations found with `-validate` (JSON is still written).
+
+The file is opened read-only, so it is safe to run against a show that is
+currently open in TheatreMix.
+
+## Output
+
+One JSON object with these top-level keys:
+
+| key | content |
+|---|---|
+| `format` | schema variant, `minVersion`, `profileSchemaVersion`, tables and optional columns present |
+| `show` | designer, venue, target console, last-connected console |
+| `config` | typed settings (channels, DCAs, FX, feature switches, …) plus `raw` with every config row verbatim |
+| `channels` | controlled channels with their names (`isAuxIn` for negative numbers) |
+| `positions`, `profiles`, `ensembles`, `actors`, `actorProfiles`, `actorGroups`, `caches` | the remaining tables, decoded |
+| `cues` | every stored cue, sorted; DCA assignments, per-channel positions / profiles / FX / level offsets (raw tenths and dB), snippets, scenes, playback cue, derived `id` (e.g. `5.20`), `colourName` and `mutedChannels` |
+
+Values the specification marks as not yet understood (console bus ids, button
+maps, `backupChannels`) are passed through unchanged.
+
+## Library
+
+```go
+import "github.com/mcmillan/theatremix-parser/tmix"
+
+show, err := tmix.OpenFile("show.tmix")   // or tmix.OpenBytes(data)
+violations := tmix.Validate(show)
+```
+
+## Development
+
+```sh
+go test ./...
+go test ./cmd/... -update   # regenerate golden JSON after an intentional output change
+```
