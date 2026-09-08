@@ -6,6 +6,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 )
 
@@ -64,5 +65,26 @@ func TestOpenDBIsReadOnly(t *testing.T) {
 	defer db.Close()
 	if _, err := db.Exec(`INSERT INTO config (param, value) VALUES ('x', 'y')`); err == nil {
 		t.Error("write through read-only connection should fail")
+	}
+}
+
+func TestFileURI(t *testing.T) {
+	cases := map[string]string{
+		"/tmp/a show#1.tmix":       "file:///tmp/a%20show%231.tmix",
+		"/plain/path.tmix":         "file:///plain/path.tmix",
+		"/q?uery/and%percent.tmix": "file:///q%3Fuery/and%25percent.tmix",
+	}
+	if runtime.GOOS == "windows" {
+		// filepath.ToSlash only rewrites the native separator, so the drive
+		// path form can only be exercised on Windows.
+		cases = map[string]string{
+			`C:\Users\me\show.tmix`: "file:///C:/Users/me/show.tmix",
+			`D:\with space\s.tmix`:  "file:///D:/with%20space/s.tmix",
+		}
+	}
+	for in, want := range cases {
+		if got := fileURI(in); got != want {
+			t.Errorf("fileURI(%q) = %q, want %q", in, got, want)
+		}
 	}
 }

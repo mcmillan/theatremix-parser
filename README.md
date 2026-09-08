@@ -1,5 +1,7 @@
 # theatremix-parser
 
+[![CI](https://github.com/mcmillan/theatremix-parser/actions/workflows/ci.yml/badge.svg)](https://github.com/mcmillan/theatremix-parser/actions/workflows/ci.yml)
+
 Reads a [TheatreMix](https://theatremix.com/) `.tmix` show file and writes a JSON
 representation of it. The show file format was reverse-engineered; the
 specification lives in [`docs/`](docs/):
@@ -31,6 +33,13 @@ Bear this in mind when relying on it:
   affiliated with, endorsed by, or supported by them.
 
 ## Install
+
+Prebuilt binaries for macOS, Linux and Windows (amd64 and arm64) are attached
+to each [release](https://github.com/mcmillan/theatremix-parser/releases),
+with a `SHA256SUMS` file. The macOS binaries are not notarised, so Gatekeeper
+may require `xattr -d com.apple.quarantine theatremix-parser` on first run.
+
+Or build from source:
 
 ```sh
 go install github.com/mcmillan/theatremix-parser/cmd/theatremix-parser@latest
@@ -95,3 +104,11 @@ go test ./cmd/... -update   # regenerate golden JSON after an intentional output
 
 Tests run against the real show file in [`testdata/real/`](testdata/real/);
 see its README for what it covers and how to add more files.
+
+CI (`.github/workflows/ci.yml`) runs the suite on Ubuntu, macOS and Windows,
+cross-compiles all six release targets on every push, and on a `v*` tag
+publishes them to a GitHub Release:
+
+```sh
+git tag v0.1.0 && git push origin v0.1.0
+```

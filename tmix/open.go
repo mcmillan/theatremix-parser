@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 
 	_ "modernc.org/sqlite" // registers the "sqlite" database/sql driver
 )
@@ -78,8 +79,7 @@ func openDB(path string) (*sql.DB, error) {
 	if err != nil {
 		return nil, err
 	}
-	u := url.URL{Scheme: "file", Path: abs}
-	dsn := u.String() + "?mode=ro&immutable=1"
+	dsn := fileURI(abs) + "?mode=ro&immutable=1"
 	db, err := sql.Open("sqlite", dsn)
 	if err != nil {
 		return nil, err
@@ -90,4 +90,15 @@ func openDB(path string) (*sql.DB, error) {
 		return nil, fmt.Errorf("%s: %w", path, err)
 	}
 	return db, nil
+}
+
+// fileURI renders an absolute path as a file: URI. Windows drive paths become
+// file:///C:/dir/file, the form SQLite expects; a bare C:\dir would otherwise be
+// parsed as a URI authority.
+func fileURI(abs string) string {
+	p := filepath.ToSlash(abs)
+	if !strings.HasPrefix(p, "/") {
+		p = "/" + p
+	}
+	return (&url.URL{Scheme: "file", Path: p}).String()
 }

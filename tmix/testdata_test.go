@@ -2,7 +2,6 @@ package tmix
 
 import (
 	"database/sql"
-	"net/url"
 	"os"
 	"path/filepath"
 	"testing"
@@ -40,11 +39,7 @@ func copyReal(t *testing.T, dst string) string {
 func mutatedCopy(t *testing.T, stmts ...string) string {
 	t.Helper()
 	path := copyReal(t, filepath.Join(t.TempDir(), "show.tmix"))
-	abs, err := filepath.Abs(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	db, err := sql.Open("sqlite", (&url.URL{Scheme: "file", Path: abs}).String())
+	db, err := sql.Open("sqlite", path)
 	if err != nil {
 		t.Fatal(err)
 	}

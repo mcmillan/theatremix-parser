@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"flag"
-	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -38,7 +37,7 @@ func brokenCopy(t *testing.T, stmts ...string) string {
 	if err := os.WriteFile(path, data, 0o644); err != nil {
 		t.Fatal(err)
 	}
-	db, err := sql.Open("sqlite", (&url.URL{Scheme: "file", Path: path}).String())
+	db, err := sql.Open("sqlite", path)
 	if err != nil {
 		t.Fatal(err)
 	}
