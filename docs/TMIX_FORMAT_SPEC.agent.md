@@ -106,8 +106,8 @@ Read into a dict; apply defaults for missing params. Types are the *interpretati
 | `consoleMAC` | str | `""` | Last connected MAC |
 | `autoConnect` | Bool | `0` | Auto-connect on open |
 | `channels` | IntList (ordered) | `""` | Controlled channels in console order; ≤ 48; negatives = Aux In |
-| `dcas` | IntList (ordered) | `""` | Controlled console DCA numbers; `len` ≤ 12 ⇒ which `dcaNN*` columns matter |
-| `backupChannels` | `[?]` | `""` | Fixed backup per primary channel; shape unobserved (probably IntMap primary→backup). Keep raw. |
+| `dcas` | IntList (ordered) | `""` | Controlled console DCA numbers, not necessarily contiguous (`1,…,8,11` seen); column `dcaNN` ↔ NN-th entry; `len` ≤ 12 |
+| `backupChannels` | IntMap backup→primary `[I]` | `""` | Fixed backup per primary channel. Observed `44=1,46=8` with channels 1–16 controlled ⇒ key = backup (non-controlled) channel, value = primary. Also keep raw. |
 | `spareBackup` | Int | `0` | Spare backup channel; `0` = none |
 | `fxAssigns` | IntList | `""` | FX buses (1–4) assignable to channels |
 | `fxMutes` | IntList | `""` | FX buses whose mutes are cue-programmed |
@@ -132,7 +132,7 @@ Read into a dict; apply defaults for missing params. Types are the *interpretati
 | `gangLRName` | str | `""` | LR scribble label |
 | `gangLRColour` | Int or `""` | `""` | Console colour index for LR scribble |
 | `labelLR` | Int | console-specific | Show cue info on a scribble strip: `0` off, `1` on |
-| `labelTargetBus` | busId | console-specific; `1000` = LR | Strip that shows cue info (LR or a non-controlled DCA) |
+| `labelTargetBus` | busId | console-specific; `1000` = LR | Strip that shows cue info (LR, or a non-controlled DCA: `1408` WING, `1421` DM7) |
 | `consoleMuteDCAUnassign` | Bool | `1` | Channel mute button unassigns from DCA while editing |
 | `suppressDCAMuteBackupSwitch` | Bool | `0` | Suppress DCA-mute backup switching |
 | `selectOnSpill` | Bool | `1` | DCA-spill option; semantics `[?]` |
@@ -155,10 +155,10 @@ PK/unique: `(number, point)`. One row per stored cue.
 | `point` | Int 0–99 | — (NOT NULL, default 0) | Integer suffix; `0` = whole cue |
 | `name` | str | `""` | Cue text. Leading `>` (repeatable) = indent |
 | `dcaNNChannels` NN=01..12 | IntList (set) | unassigned | Channels on DCA NN. Every controlled channel absent from all DCAs is **muted** by the app. Columns NN > `len(cfg.dcas)` are unused |
-| `dcaNNLabel` | str | derived by app | Scribble label. Non-empty with empty channels = placeholder DCA. Ensemble name is stored here when an ensemble was typed |
+| `dcaNNLabel` | str | derived by app | Scribble label. Non-empty with empty channels = placeholder DCA. Ensemble name (incl. `All`) is stored here when an ensemble was typed; channels = ensemble minus channels already on other DCAs |
 | `channelPositions` | IntMap ch→positionId | all default (0) | Non-zero positions only |
 | `channelProfiles` | IntMap ch→profileId | all default | Non-default profiles only; `profiles.channel == ch` |
-| `channelFX` | IntMap ch→FxSpec | all `cfg.defaultFX` | FxSpec: `-1` none · `n` · `n+m…` |
+| `channelFX` | IntMap ch→FxSpec | all `cfg.defaultFX` | FxSpec: `-1` none · `n` · `n+m…`. Explicit settings — may equal `defaultFX` |
 | `fxMutes` | IntList | none unmuted | FX buses **unmuted** in this cue; others in `cfg.fxMutes` muted |
 | `snippets` | IntList | none | Console snippet indices to recall `[I: format]` |
 | `scenes` | IntList | none | Console scene numbers to recall |
@@ -259,7 +259,7 @@ Dangling actor ids in `actorGroups` occur (actors deleted) — not an error.
 | Profile id | `profiles.id` |
 | Ensemble id | `1` implicit All; `2`,`3` defaults |
 | FX bus | single digit 1–4 (TheatreMix-side); console bus via `cfg.fxBusMap` |
-| Bus id | X32/M32: mix bus 1–16. Others: ≥1000 codes (`1000` LR; `1101–1104` dLive FX sends; `1302` a position bus; `1408` a WING DCA). Encoding `[?]` — keep raw |
+| Bus id | Mix buses: raw console bus number on X32/M32 and Yamaha (`13–16`, `37–40`, `5`); `11xx` on dLive. Other targets ≥1000: `1000` LR; `1302` dLive position bus; `14xx` = DCA xx (`1408` WING, `1421` DM7) `[I]`. Keep raw |
 | Scene number | X32 0-based; TF `0–99`⇒A00–A99, `100–199`⇒B00–B99; QL/CL `x.yy` ⇒ (`scene`,`point`) |
 | Colour | `0`/NULL none, `1` red, `2` yellow, `3` green, `4` blue, `5` purple `[I]` |
 | Action index | `0` Go, `1` Back; others `[?]` |
@@ -317,8 +317,8 @@ I11 (number, point) unique (DB index)
 6. Forgetting the implicit cue 0 and implicit ensemble 1.
 7. Applying `channelLevels` as dB instead of dB/10.
 8. Expecting a channel name table — use `profiles.default=1`.
-9. Assuming `channelFX` entries exist only when they differ from `defaultFX` — `-1` is stored
-   explicitly even when `defaultFX=-1`.
+9. Assuming `channelFX` entries exist only when they differ from `defaultFX` — entries are explicit
+   settings: `-1` is stored even when `defaultFX=-1`, and `4=2` is stored with `defaultFX=2`.
 10. Parsing `profiles.data` with a fixed key set — keys vary by console.
 11. Choking on the `ensembles` DDL typo when introspecting declared types.
 12. Splitting `channelFX` values on `,` before `=` — split pairs on `,`, then key/value on `=`,
@@ -332,7 +332,7 @@ I11 (number, point) unique (DB index)
 |---|---|
 | Bus-id encoding (non-X32) | Keep raw int; expose `is_x32_family` to interpret 1–16 as mix buses |
 | `buttonMap`/`muteButtonMap` action ≥ 2 | Keep raw map; name only 0/1 |
-| `backupChannels` | Keep raw string |
+| `backupChannels` orientation | Parse as IntMap backup→primary `[I]`; keep the raw string as well |
 | `fxBusMap` "Inhibited" | Keep raw; do not assume all FX in `fxAssigns` have a mapping |
 | `scenePoints` multi-element | Zip with `scenes`; if lengths differ, pad points with `0` |
 | `colour` 3, `skip=1`, `profileSchemaVersion=1` | Unobserved; accept |
@@ -448,15 +448,15 @@ def decode_cue(row, ndcas):
 ## 11. Fixture coverage (what real data exists to test against)
 
 Observed in real files: all three schema variants; X32/X32C, M32/M32R, WING/WINGC (target),
-dLive CDM48/DM48, QL5, and a never-connected file; `dcas` 1–6 … 1–12 incl. populated
+dLive CDM48/DM48, QL5, DM7 (target), and never-connected files; `dcas` 1–6 … 1–12 incl. populated
 `dca09…12`; placeholder DCAs; negative channels; dLive channels to 88; `0.1` + `0.10`;
 `channelPositions`, `positions.buses`, `channelProfiles` (cue + ensemble), `channelFX` with `-1`
 and `n+m`, `fxMutes`, `channelLevels` at −150 and +50, `colour` ∈ {0,1,2,4,5,NULL}, `qLabCue`,
 `scenes`+`scenePoints` (single), all three caches, `actorGroups`, one populated `profiles.data`
 (dLive), non-default profiles, `spareBackup`, `gangLRName/Colour`, 4-action `buttonMap`,
-`muteButtonMap`, `muteButtonAssignKeys`, `qLabCues=2`, `minVersion` 3.0/3.1.
+`muteButtonMap`, `muteButtonAssignKeys`, `qLabCues=2`, `minVersion` 3.0/3.1, `backupChannels`,
+populated `actors`, non-contiguous `dcas`, an `All` merge, `dawRemote=1`, a QLab passcode.
 
-Never observed (binary/help only): `cues.snippets`, `cueZero*` lists, `backupChannels`,
-`gangLRChannels`, `profiles.label`, populated `actors`/`actorProfiles`, multi-element
-`scenes`, `skip=1`, `colour=3`, `profileSchemaVersion=1`, inhibited `fxBusMap`, TF/SQ/Avantis/
-DM7/GLD/Qu targets.
+Never observed (binary/help only): `cues.snippets`, `cueZero*` lists, `gangLRChannels`,
+`profiles.label`, populated `actorProfiles`, multi-element `scenes`, `skip=1`, `colour=3`,
+`profileSchemaVersion=1`, inhibited `fxBusMap`, TF/SQ/Avantis/GLD/Qu targets.

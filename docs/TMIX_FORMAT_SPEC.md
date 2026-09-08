@@ -242,8 +242,8 @@ Params marked *console-specific* are filled in from the selected console family 
 | param | type | default | meaning |
 |---|---|---|---|
 | `channels` | IntList | `""` | Channels under TheatreMix control, in console order. Max 48. Negative values are Aux-In channels (§5.0). Every channel here has exactly one `profiles` row with `default=1`. |
-| `dcas` | IntList | `""` | Console DCA numbers under control (1-based). Length determines which `dcaNN*` columns are meaningful (max 12). |
-| `backupChannels` | IntMap? | `""` | Fixed backup channel per primary channel. **[?]** Empty in every example; help describes "a backup channel assigned to each channel", so `primary=backup` is the likely shape. |
+| `dcas` | IntList | `""` | Console DCA numbers under control (1-based); need not be contiguous (`1,…,8,11` observed). Column `dcaNN` holds the NN-th entry; the list length determines which `dcaNN*` columns are meaningful (max 12). |
+| `backupChannels` | IntMap backup→primary | `""` | Fixed backup channel per primary channel. Observed `44=1,46=8` on a show controlling channels 1–16: the keys are the (non-controlled) backup channels and the values the primary channels they cover **[I]**. |
 | `spareBackup` | Int | `0` | Channel number of the floating "spare backup" mic; `0` = none. |
 | `fxAssigns` | IntList | `""` | TheatreMix FX bus numbers (1–4) that may be assigned to channels in cues. |
 | `fxMutes` | IntList | `""` | TheatreMix FX bus numbers whose mutes are cue-programmed. Enables the FX-mute column. |
@@ -273,7 +273,7 @@ Params marked *console-specific* are filled in from the selected console family 
 | `gangLRName` | str | `""` | LR scribble-strip label. |
 | `gangLRColour` | Int or `""` | `""` | Console colour index for the LR scribble (e.g. `11`). |
 | `labelLR` | Int | console-specific | Show cue info on a scribble strip: `0` off, `1` on. |
-| `labelTargetBus` | busId | console-specific; `1000` = LR/main | Which strip shows cue info (LR, or a non-controlled DCA — `1408` on a WING with DCAs 1–6 controlled). |
+| `labelTargetBus` | busId | console-specific; `1000` = LR/main | Which strip shows cue info (LR, or a non-controlled DCA — `1408` on a WING with DCAs 1–6 controlled, `1421` on a Yamaha DM7 with DCAs 1–8 and 11 controlled). |
 
 ### 4.5 Console behaviour
 
@@ -306,7 +306,7 @@ Params marked *console-specific* are filled in from the selected console family 
 | **Ensemble id** | `ensembles.id`; `1` is the implicit "All" ensemble (never stored; the app queries `WHERE id != 1`); `2` = Male, `3` = Female are created with the file. |
 | **Actor id** | `actors.id`. |
 | **FX bus** | TheatreMix-side FX number, single digit (validator `^((\d)((,\|;)( )?(\d)){0,3})?$`), 1–4 observed; mapped to a console bus via `config.fxBusMap`. |
-| **Bus id** | Console-specific integer. X32/M32: mix-bus number 1–16 directly. Other consoles use ≥1000 codes: `1000` = LR/Main, `1101…1104` (dLive default FX mapping), `1181`, `1183`, `1302` (a position bus), `1408` (a WING DCA). Likely `1000 + 100·type + index` **[I]**; treat as **opaque** **[?]**. |
+| **Bus id** | Console-specific integer. Mix buses on X32/M32 and Yamaha are the console's own bus number (`13–16` on X32; `37–40` and `5` on DM7); dLive uses `1101…1104`, `1181`, `1183`. Other targets use ≥1000 codes: `1000` = LR/Main, `1302` (a dLive position bus), and `14xx` = DCA xx (`1408` on WING, `1421` on DM7) **[I]**. Likely `1000 + 100·type + index`; treat as **opaque** **[?]**. |
 | **Cue id** | `(number, point)` — see §5.2. |
 | **Snippet / scene number** | Console indices. X32 snippets are 0-based (`0` = first slot observed). Yamaha TF: 0–99 ⇒ A00–A99, 100–199 ⇒ B00–B99. Yamaha QL/CL scene numbers `x.yy` split into `scene` + `point`. |
 | **Colour index** | See §5.2 `colour`. |
@@ -335,10 +335,10 @@ One row per cue. Unique key `(number, point)`.
 | `number`, `point` | int | | Cue id (above). |
 | `name` | text | free text | Cue text. A leading `>` indents the row in the cue list (may be repeated). No newlines observed. |
 | `dcaNNChannels` (NN = 01…12) | text | IntList (set) | Channels assigned to DCA NN in this cue. Order not significant (`5,3,2,20,19,…` occurs). Empty = DCA unassigned. Any controlled channel not present in *any* DCA is muted by the app. Columns beyond `len(config.dcas)` are unused/empty. |
-| `dcaNNLabel` | text | free text | Scribble-strip label for DCA NN. Empty ⇒ the app derives it (single channel: profile name/label; ensemble typed by name: the ensemble name is stored here, e.g. `Male`). May be non-empty with empty channels = **placeholder DCA**. The runtime `~` backup prefix is *not* stored. |
+| `dcaNNLabel` | text | free text | Scribble-strip label for DCA NN. Empty ⇒ the app derives it (single channel: profile name/label; ensemble typed by name: the ensemble name is stored here, e.g. `Male`, or `All` for the implicit ensemble — with the channel list expanded minus channels already on other DCAs). May be non-empty with empty channels = **placeholder DCA**. The runtime `~` backup prefix is *not* stored. |
 | `channelPositions` | text | IntMap channel→positionId | Position for channels assigned in this cue. **Only non-default entries** (position ≠ 0) are stored. |
 | `channelProfiles` | text | IntMap channel→profileId | Profile for assigned channels. **Only non-default profiles** are stored; the profile's `channel` always equals the key. |
-| `channelFX` | text | IntMap channel→FxSpec | Explicit FX for assigned channels. `FxSpec` = `-1` (no FX, overriding `defaultFX`) \| `n` \| `n+m[+…]` (multiple buses). Absent channel ⇒ `config.defaultFX`. |
+| `channelFX` | text | IntMap channel→FxSpec | Explicit FX for assigned channels. `FxSpec` = `-1` (no FX, overriding `defaultFX`) \| `n` \| `n+m[+…]` (multiple buses). Absent channel ⇒ `config.defaultFX`. Entries are explicit settings, not deltas: a value equal to `defaultFX` is stored as-is (`4=2` with `defaultFX=2` observed). |
 | `fxMutes` | text | IntList | **FX buses left UNMUTED in this cue**; every other bus listed in `config.fxMutes` is muted (help: "Type in the FX buses you would like unmuted… the other FX buses will be automatically muted"). Despite the name, it is the *unmute* list. |
 | `snippets` | text | IntList | Console snippets recalled after the cue's DCA data is applied. (Empty in all examples; format per help "comma separated" and by analogy with `fxMutes`.) |
 | `scenes` | text | IntList | Console scenes recalled. |
@@ -537,7 +537,7 @@ Derived helpers worth exposing:
 | `buttonMap` / `muteButtonMap` action indices ≥ 2 | **[?]** | 0 = Go, 1 = Back certain. Candidate list in §4.5. |
 | `qLabCues` values 2/3 | **[I]** | 2 observed; 3 by analogy. |
 | `colour` 1–5 order | **[I]** | 0/NULL = none is certain. |
-| `backupChannels` format | **[?]** | Empty in all examples; probably `primary=backup` IntMap. |
+| `backupChannels` orientation | **[I]** | IntMap; one observation (`44=1,46=8`, channels 1–16 controlled) implies `backup=primary`. |
 | `scenePoints` with multiple scenes | **[I]** | Parallel list assumed; only single-element data seen. |
 | `fxBusMap` "Inhibited" encoding | **[?]** | Not observed. |
 | `actorGroups.data` key meaning | **[I]** | channel→actor (see §5.5). |
@@ -633,8 +633,8 @@ binary/help alone) — useful when deciding what to unit-test against fixtures:
 
 **Backed by populated data in the sample corpus**
 
-- Console families: X32/X32C, M32/M32R, WING/WINGC (target only), dLive CDM48/DM48, Yamaha QL5;
-  a file with no console ever connected (empty `console*` fields).
+- Console families: X32/X32C, M32/M32R, WING/WINGC (target only), dLive CDM48/DM48, Yamaha QL5 and
+  DM7 (target only); files with no console ever connected (empty `console*` fields).
 - All three schema variants (§2.2).
 - `dcas` ranging 1–6 up to 1–12, including populated `dca09…dca12` columns and placeholder DCAs
   (label without channels).
@@ -645,11 +645,12 @@ binary/help alone) — useful when deciding what to unit-test against fixtures:
   `qLabCue`, `scenes` + `scenePoints` (single-element), `snippetCache`, `fxCache`, `sceneCache`,
   `ensembles.channelProfiles`, `actorGroups`, `profiles.data` (one populated row, dLive),
   non-default profiles, `spareBackup`, `gangLRName`/`gangLRColour`, `buttonMap` with four actions,
-  `muteButtonMap`, `muteButtonAssignKeys`, `qLabCues=2`, `minVersion` 3.0 and 3.1.
+  `muteButtonMap`, `muteButtonAssignKeys`, `qLabCues=2`, `minVersion` 3.0 and 3.1, `backupChannels`,
+  populated `actors`, non-contiguous `dcas`, an `All`-ensemble merge, `dawRemote=1`, a QLab passcode.
 
 **Not observed in any sampled file (documented from binary strings / help only)**
 
-- `cues.snippets`, `config.cueZeroSnippets/Scenes/ScenePoints`, `backupChannels`,
-  `gangLRChannels`, `profiles.label`, populated `actors` / `actorProfiles`, multi-element
-  `scenes`/`scenePoints`, `skip=1`, `colour=3`, `profileSchemaVersion=1`, an "Inhibited" `fxBusMap`
-  entry, Yamaha TF / SQ / Avantis / DM7 / GLD / Qu targets.
+- `cues.snippets`, `config.cueZeroSnippets/Scenes/ScenePoints`, `gangLRChannels`,
+  `profiles.label`, populated `actorProfiles`, multi-element `scenes`/`scenePoints`, `skip=1`,
+  `colour=3`, `profileSchemaVersion=1`, an "Inhibited" `fxBusMap` entry, Yamaha TF / SQ / Avantis /
+  GLD / Qu targets.

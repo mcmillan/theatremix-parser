@@ -138,3 +138,27 @@ func TestRealFixtures(t *testing.T) {
 		})
 	}
 }
+
+// kitchenSink is the committed real show file (see testdata/real/README.md);
+// unlike TestRealFixtures this test requires it to be present.
+const kitchenSink = "../../testdata/real/kitchen_sink.tmix"
+
+func TestKitchenSinkGolden(t *testing.T) {
+	code, out, errs := runCLI(t, nil, "-validate", filepath.FromSlash(kitchenSink))
+	if code != 0 || errs != "" {
+		t.Fatalf("exit %d, stderr %q", code, errs)
+	}
+	golden := filepath.Join("testdata", "kitchen_sink.golden.json")
+	if *update {
+		if err := os.WriteFile(golden, []byte(out), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	want, err := os.ReadFile(golden)
+	if err != nil {
+		t.Fatalf("%v (run with -update to create)", err)
+	}
+	if out != string(want) {
+		t.Errorf("output differs from %s; run go test ./cmd/... -update after reviewing", golden)
+	}
+}
