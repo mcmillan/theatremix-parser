@@ -9,7 +9,8 @@ import (
 )
 
 // realFixtures returns the real show files placed in testdata/real at the
-// repository root (see testdata/real/README.md), skipping when there are none.
+// repository root (see testdata/real/README.md); at least kitchen_sink.tmix
+// must be present.
 func realFixtures(t *testing.T) []string {
 	t.Helper()
 	matches, err := filepath.Glob(filepath.Join("..", "testdata", "real", "*.tmix"))
@@ -17,7 +18,7 @@ func realFixtures(t *testing.T) []string {
 		t.Fatal(err)
 	}
 	if len(matches) == 0 {
-		t.Skip("no real show files in testdata/real")
+		t.Fatal("no real show files in testdata/real (kitchen_sink.tmix is expected)")
 	}
 	return matches
 }

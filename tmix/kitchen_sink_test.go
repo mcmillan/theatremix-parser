@@ -1,23 +1,16 @@
 package tmix
 
 import (
-	"path/filepath"
 	"reflect"
 	"testing"
 )
-
-// kitchenSink is the committed real show file (see testdata/real/README.md).
-const kitchenSink = "../testdata/real/kitchen_sink.tmix"
 
 // TestKitchenSink pins the decode of the real fixture, which exercises
 // settings no synthetic fixture does: a Yamaha DM7 target, non-contiguous
 // controlled DCAs, populated backupChannels and actors, an explicit channelFX
 // entry equal to defaultFX, and a merge of the implicit "All" ensemble.
 func TestKitchenSink(t *testing.T) {
-	show, err := OpenFile(filepath.FromSlash(kitchenSink))
-	if err != nil {
-		t.Fatal(err)
-	}
+	show := openReal(t)
 	if v := Validate(show); len(v) != 0 {
 		t.Errorf("violations: %v", v)
 	}

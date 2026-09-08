@@ -69,3 +69,6 @@ violations := tmix.Validate(show)
 go test ./...
 go test ./cmd/... -update   # regenerate golden JSON after an intentional output change
 ```
+
+Tests run against the real show file in [`testdata/real/`](testdata/real/);
+see its README for what it covers and how to add more files.

@@ -7,8 +7,6 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-
-	"github.com/mcmillan/theatremix-parser/internal/fixture"
 )
 
 func TestOpenBytesMatchesOpenFile(t *testing.T) {
@@ -17,7 +15,7 @@ func TestOpenBytesMatchesOpenFile(t *testing.T) {
 	if err := os.Mkdir(dir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	path := fixture.Create(t, filepath.Join(dir, "a show.tmix"), "C")
+	path := copyReal(t, filepath.Join(dir, "a show.tmix"))
 	fromFile, err := OpenFile(path)
 	if err != nil {
 		t.Fatal(err)
@@ -53,16 +51,13 @@ func TestOpenErrors(t *testing.T) {
 	if _, err := OpenFile(filepath.Join(dir, "missing.tmix")); err == nil {
 		t.Error("missing file should fail")
 	}
-	bare := fixture.CreateBare(t, filepath.Join(dir, "bare.sqlite"),
-		`CREATE TABLE config (param TEXT, value TEXT)`, `CREATE TABLE profiles (id INTEGER)`)
-	if _, err := OpenFile(bare); !errors.Is(err, ErrNotTmix) {
+	if _, err := OpenFile(mutatedCopy(t, `DROP TABLE cues`)); !errors.Is(err, ErrNotTmix) {
 		t.Errorf("sqlite without cues: got %v, want ErrNotTmix", err)
 	}
 }
 
 func TestOpenDBIsReadOnly(t *testing.T) {
-	path := fixture.Create(t, filepath.Join(t.TempDir(), "ro.tmix"), "C")
-	db, err := openDB(path)
+	db, err := openDB(copyReal(t, filepath.Join(t.TempDir(), "ro.tmix")))
 	if err != nil {
 		t.Fatal(err)
 	}
