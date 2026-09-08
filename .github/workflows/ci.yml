@@ -22,9 +22,10 @@ jobs:
       - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
-      - name: make check
+      # GNU make is not guaranteed on the Windows image; run the same checks directly there.
+      - name: check
         shell: bash
-        run: make check
+        run: ${{ runner.os == 'Windows' && 'test -z "$(gofmt -l .)" && go vet ./... && go test ./...' || 'make check' }}
 
   build:
     name: build (${{ matrix.goos }}/${{ matrix.goarch }})
@@ -45,14 +46,17 @@ jobs:
       - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
+      - name: Verify tag matches VERSION
+        if: github.ref_type == 'tag'
+        run: make verify-tag TAG="$GITHUB_REF_NAME"
       - name: make dist
         id: build
         run: |
           set -euo pipefail
           if [[ "$GITHUB_REF_TYPE" == tag ]]; then
-            version="$GITHUB_REF_NAME"
+            version="$(cat VERSION)"
           else
-            version="$(git describe --tags --always --dirty)"
+            version="$(make -s version)"
           fi
           make dist GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} VERSION="$version"
           echo "name=theatremix-parser_${version}_${{ matrix.goos }}_${{ matrix.goarch }}" >> "$GITHUB_OUTPUT"

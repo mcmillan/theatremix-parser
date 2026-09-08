@@ -108,13 +108,24 @@ make help       # list every target
 Tests run against the real show file in [`testdata/real/`](testdata/real/);
 see its README for what it covers and how to add more files.
 
-CI (`.github/workflows/ci.yml`) runs the suite on Ubuntu, macOS and Windows,
-cross-compiles all six release targets on every push, and on a `v*` tag
-publishes them to a GitHub Release:
+CI (`.github/workflows/ci.yml`) runs the suite on Ubuntu, macOS and Windows and
+cross-compiles all six release targets on every push.
+
+### Releasing
+
+The `VERSION` file holds the current version — a single integer — and releases
+are tagged `v<VERSION>`. To publish the next one:
 
 ```sh
-git tag v0.1.0 && git push origin v0.1.0
+make release
 ```
+
+This checks the tree is clean, on `main` and in sync with `origin`, runs
+`make check`, increments `VERSION`, commits `Release vN`, tags `vN` and pushes
+both. CI verifies the tag matches `VERSION`, builds the archives and attaches
+them (with `SHA256SUMS`) to a GitHub Release. Builds made from anything other
+than the release tag are stamped `<VERSION>-dev.<sha>` so they can't be
+confused with a release.
 
 ## License
 
