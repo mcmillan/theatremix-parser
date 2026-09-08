@@ -7,6 +7,29 @@ specification lives in [`docs/`](docs/):
 - [`docs/TMIX_FORMAT_SPEC.md`](docs/TMIX_FORMAT_SPEC.md) — full specification with evidence
 - [`docs/TMIX_FORMAT_SPEC.agent.md`](docs/TMIX_FORMAT_SPEC.agent.md) — condensed reference
 
+## Provenance — this project was LLM-generated
+
+Everything in this repository — the format specification, the Go library and
+CLI, the tests and this README — was written by an LLM ([Claude](https://claude.com),
+via Claude Code) working under human direction; the commit trailers name the
+model. The human's contributions were the goal, the design decisions
+(module layout, output shape, driver choice), review of the results, and the
+real show file used as the test fixture.
+
+Bear this in mind when relying on it:
+
+- **The format specification is unofficial.** It was derived from a corpus of
+  real show files, strings embedded in the TheatreMix application, and the
+  app's bundled help — not from documentation or source provided by the
+  vendor. Each statement carries a confidence marker (`[C]` confirmed, `[I]`
+  inferred, `[?]` unknown); treat `[I]` and `[?]` items with appropriate
+  caution and prefer keeping their raw values.
+- **The parser is read-only** and does nothing to your show files, but its
+  interpretation of some fields (console bus ids, button maps, colour order)
+  rests on inference. Please report discrepancies.
+- TheatreMix is a product of Mixing Technology Pty Ltd. This project is not
+  affiliated with, endorsed by, or supported by them.
+
 ## Install
 
 ```sh
